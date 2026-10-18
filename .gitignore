@@ -1,0 +1,10 @@
+data/*
+!data/raw/
+data/raw/*
+!data/raw/manifest.json
+results/
+figures/
+__pycache__/
+.pytest_cache/
+.venv/
+*.pt

@@ -1,0 +1,30 @@
+{
+  "genomeFasta": {
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz",
+    "file": "GCF_000005845.2_genomic.fna.gz",
+    "version": "GCF_000005845.2 (ASM584v2)",
+    "sha256": "a96d3cfa58c88d477013c768f90a11d2386d42a70d566abfb6d9013dcbd24255",
+    "downloadedAt": "2026-10-18T22:30:44+00:00"
+  },
+  "genomeGff": {
+    "url": "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.gff.gz",
+    "file": "GCF_000005845.2_genomic.gff.gz",
+    "version": "GCF_000005845.2 (ASM584v2)",
+    "sha256": "afdf03dc1d06e423d874ee29d9e0df14f5d32baf893f4da9f93aa721eb5f495e",
+    "downloadedAt": "2026-10-18T22:30:44+00:00"
+  },
+  "uniprotProteome": {
+    "url": "https://rest.uniprot.org/uniprotkb/stream?query=proteome:UP000000625&format=tsv&fields=accession,reviewed,gene_primary,gene_oln,go_id&compressed=true",
+    "file": "UP000000625.tsv.gz",
+    "version": "2026_03",
+    "sha256": "7ecaddbb070eccfa3b2666cc48c9c9922f9e9d3296c797771da2393b9533f22b",
+    "downloadedAt": "2026-10-18T22:30:47+00:00"
+  },
+  "goBasic": {
+    "url": "https://current.geneontology.org/ontology/go-basic.obo",
+    "file": "go-basic.obo",
+    "version": "releases/2026-07-26",
+    "sha256": "b08d45b268b8c24ccb2513dbbbc7d4df9f6521c099b413f79eb31e06e0fa3bcc",
+    "downloadedAt": "2026-10-18T22:30:49+00:00"
+  }
+}

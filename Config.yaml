@@ -1,0 +1,46 @@
+seed: 42
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  results: results
+  figures: figures
+
+sources:
+  genomeFasta:
+    url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
+    file: GCF_000005845.2_genomic.fna.gz
+    version: GCF_000005845.2 (ASM584v2)
+  genomeGff:
+    url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.gff.gz
+    file: GCF_000005845.2_genomic.gff.gz
+    version: GCF_000005845.2 (ASM584v2)
+  uniprotProteome:
+    url: https://rest.uniprot.org/uniprotkb/stream?query=proteome:UP000000625&format=tsv&fields=accession,reviewed,gene_primary,gene_oln,go_id&compressed=true
+    file: UP000000625.tsv.gz
+    versionHeader: X-UniProt-Release
+  goBasic:
+    url: https://current.geneontology.org/ontology/go-basic.obo
+    file: go-basic.obo
+    versionFromObo: true
+
+model:
+  name: InstaDeepAI/nucleotide-transformer-v2-50m-multi-species
+  # Layer, hidden size and tokenizer are confirmed in #3.
+  layer: null
+  maxNucleotides: 1000
+
+windows:
+  length: 1000
+  step: 500
+
+sae:
+  features: 1024
+  k: null
+  validationFraction: 0.2
+
+enrichment:
+  topN: 50
+  minTermGenes: 5
+  maxTermGenes: 500
+  fdr: 0.05
