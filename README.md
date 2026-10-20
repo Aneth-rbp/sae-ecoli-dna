@@ -16,6 +16,8 @@ python -m pip install -r requirements.txt
 |---|---|---|
 | 1 | `python -m src.FetchData` | `data/raw/` and `data/raw/manifest.json` (URL, version, sha256, date) |
 
+`--source <name>` (repeatable) downloads only the named `Config.yaml` sources and merges them into the existing manifest. On the DGX Spark, `bash scripts/FetchUniprotOnSpark.sh` creates `.venv`, installs only the fetch dependencies and downloads the UniProt proteome.
+
 Data sources: NCBI RefSeq GCF_000005845.2 (FASTA and GFF), UniProt proteome UP000000625 (accession, ordered locus, GO) and `go-basic.obo`. Parameters live in `Config.yaml`; analysis decisions in `DECISIONS.md`.
 
 ## Tests

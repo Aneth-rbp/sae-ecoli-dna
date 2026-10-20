@@ -1,13 +1,20 @@
 import gzip
 import hashlib
+import json
+
+import pytest
 
 from src.FetchData import (
     BuildManifestEntry,
     CountGffCds,
     CountUniprotEntries,
+    LoadManifest,
     ReadOboVersion,
+    SelectSources,
     Sha256File,
 )
+
+SOURCES = {"genomeGff": {"file": "a.gff.gz"}, "uniprotProteome": {"file": "b.tsv.gz"}}
 
 
 def TestSha256FileMatchesHashlib(tmp_path):
@@ -54,3 +61,25 @@ def TestBuildManifestEntryHasRequiredFields(tmp_path):
     assert entry["sha256"] == hashlib.sha256(b"x").hexdigest()
     assert entry["file"] == "file.bin"
     assert "downloadedAt" in entry
+
+
+def TestSelectSourcesReturnsAllWhenNoneNamed():
+    assert SelectSources(SOURCES, None) == SOURCES
+
+
+def TestSelectSourcesKeepsOnlyNamed():
+    assert SelectSources(SOURCES, ["uniprotProteome"]) == {"uniprotProteome": {"file": "b.tsv.gz"}}
+
+
+def TestSelectSourcesRejectsUnknownName():
+    with pytest.raises(ValueError, match="uniprot"):
+        SelectSources(SOURCES, ["uniprot"])
+
+
+def TestLoadManifestIsEmptyWithoutFile(tmp_path):
+    assert LoadManifest(tmp_path) == {}
+
+
+def TestLoadManifestKeepsExistingEntries(tmp_path):
+    (tmp_path / "manifest.json").write_text(json.dumps({"goBasic": {"version": "v1"}}), encoding="utf-8")
+    assert LoadManifest(tmp_path) == {"goBasic": {"version": "v1"}}
