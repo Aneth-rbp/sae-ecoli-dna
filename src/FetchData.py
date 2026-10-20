@@ -1,3 +1,4 @@
+import argparse
 import gzip
 import hashlib
 import json
@@ -90,24 +91,54 @@ def FetchSource(source, rawDir):
     return BuildManifestEntry(source["url"], targetPath, version)
 
 
+def LoadManifest(rawDir):
+    manifestPath = rawDir / MANIFEST_NAME
+    if not manifestPath.exists():
+        return {}
+    with open(manifestPath, encoding="utf-8") as manifestFile:
+        return json.load(manifestFile)
+
+
+def SelectSources(sources, names):
+    if not names:
+        return sources
+    unknown = [name for name in names if name not in sources]
+    if unknown:
+        raise ValueError(f"Unknown source(s): {', '.join(unknown)}. Known: {', '.join(sources)}")
+    return {name: sources[name] for name in names}
+
+
 def WriteManifest(manifest, rawDir):
     with open(rawDir / MANIFEST_NAME, "w", encoding="utf-8") as manifestFile:
         json.dump(manifest, manifestFile, indent=2)
 
 
 def ReportCounts(sources, rawDir):
-    cdsCount = CountGffCds(rawDir / sources["genomeGff"]["file"])
-    uniprotCount = CountUniprotEntries(rawDir / sources["uniprotProteome"]["file"])
-    print(f"CDS in GFF: {cdsCount}")
-    print(f"UniProt entries: {uniprotCount}")
+    if "genomeGff" in sources:
+        print(f"CDS in GFF: {CountGffCds(rawDir / sources['genomeGff']['file'])}")
+    if "uniprotProteome" in sources:
+        print(f"UniProt entries: {CountUniprotEntries(rawDir / sources['uniprotProteome']['file'])}")
 
 
-def Main():
+def ParseArguments(argv=None):
+    parser = argparse.ArgumentParser(description="Download the raw data listed in Config.yaml.")
+    parser.add_argument(
+        "--source",
+        action="append",
+        dest="sources",
+        help="Config.yaml source to download (repeatable); all sources when omitted.",
+    )
+    return parser.parse_args(argv)
+
+
+def Main(argv=None):
+    arguments = ParseArguments(argv)
     config = LoadConfig()
     rawDir = Path(config["paths"]["raw"])
     rawDir.mkdir(parents=True, exist_ok=True)
-    sources = config["sources"]
-    manifest = {name: FetchSource(source, rawDir) for name, source in sources.items()}
+    sources = SelectSources(config["sources"], arguments.sources)
+    manifest = LoadManifest(rawDir)
+    manifest.update({name: FetchSource(source, rawDir) for name, source in sources.items()})
     WriteManifest(manifest, rawDir)
     ReportCounts(sources, rawDir)
 
