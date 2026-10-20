@@ -25,8 +25,9 @@ sources:
     versionFromObo: true
 
 model:
-  name: InstaDeepAI/nucleotide-transformer-v2-50m-multi-species
-  # Layer, hidden size and tokenizer are confirmed in #3.
+  name: evo2_7b
+  precision: bfloat16
+  # Layer is fixed in #3.
   layer: null
   maxNucleotides: 1000
 

@@ -1,0 +1,4 @@
+# DGX Spark only. torch comes from the NGC pytorch:25.10-py3 image; flash-attn is built first (see README).
+-r requirements.txt
+flash-attn==2.8.3
+evo2==0.6.0
