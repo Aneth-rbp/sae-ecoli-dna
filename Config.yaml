@@ -5,6 +5,7 @@ paths:
   processed: data/processed
   results: results
   figures: figures
+  embeddings: data/embeddings
 
 sources:
   genomeFasta:
@@ -30,6 +31,8 @@ model:
   # Layer is fixed in #3.
   layer: null
   maxNucleotides: 1000
+  # Pooled rows per checkpoint shard; a restart redoes at most one shard.
+  checkpointEvery: 256
 
 windows:
   length: 1000
@@ -50,3 +53,14 @@ enrichment:
 
 compare:
   candidates: 5
+
+figures:
+  dpi: 300
+  # Single report column (8.5 cm); the table spans the text width.
+  histogramWidthInches: 3.35
+  histogramHeightInches: 2.3
+  tableWidthInches: 6.9
+  fontSize: 7
+  histogramBins: 30
+  tableFeatures: 5
+  showPositiveMode: false
