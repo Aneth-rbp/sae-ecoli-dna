@@ -34,6 +34,7 @@ model:
 windows:
   length: 1000
   step: 500
+  strands: both
 
 sae:
   features: 1024
@@ -45,3 +46,4 @@ enrichment:
   minTermGenes: 5
   maxTermGenes: 500
   fdr: 0.05
+  fdrScope: perFeature
