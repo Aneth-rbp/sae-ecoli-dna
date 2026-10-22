@@ -43,6 +43,13 @@ sae:
   features: 1024
   k: null
   validationFraction: 0.2
+  epochs: 20
+  batchSize: 512
+  learningRate: 0.001
+  # k rule from #14: smallest candidate with explained variance >= min and dead fraction < max.
+  kCandidates: [16, 32]
+  minExplainedVariance: 0.8
+  maxDeadFraction: 0.2
 
 enrichment:
   topN: 50
