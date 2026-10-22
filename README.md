@@ -35,6 +35,12 @@ The arch list is `12.0`, not `12.1`. Known risk: the Evo 2 README recommends tor
 |---|---|---|
 | 1 | `python -m src.FetchData` | `data/raw/` and `data/raw/manifest.json` (URL, version, sha256, date) |
 | 2 | `python -m src.PrepareGenes` | `data/processed/Genes.tsv` (CDS trimmed to 1,000 nt, GO terms), `GoTerms.tsv`, `Windows.tsv` (1 kb, step 500, both strands), `PrepareGenesSummary.json` |
+| 3 | `python -m src.ExtractEmbeddings` (DGX Spark only) | `data/embeddings/GeneEmbeddings.npy`, `GeneIds.txt`, `WindowEmbeddings.npy`, `WindowIds.txt` |
+| 4 | `python -m src.TrainSae` | `results/sae/SaeParameters.npz`, `SaeMetrics.json`, `GeneActivations.npy` |
+| 5 | `python -m src.Enrichment` | `results/enrichment/SaeEnrichment.tsv`, `BaselineEnrichment.tsv`, `SaeSignificantTerms.tsv`, `BaselineSignificantTerms.tsv` |
+| 6 | `python -m src.Compare` | `results/Comparison.tsv`, `results/CandidateFeatures.tsv` |
+| 7 | `python -m src.MakeFigures` | `figures/PValueHistogram.png/.pdf`, `FeatureTable.png/.pdf`, `FeatureTable.md` (`--positive` adds the activation > 0 panel) |
+| 8 | `python -m src.RunAll` | Runs steps 1-7 in order, skipping those whose outputs exist; `--force STEP` reruns one, `--from STEP` reruns from there on. Stops at step 3 off the Spark (#21). |
 
 `--source <name>` (repeatable) downloads only the named `Config.yaml` sources and merges them into the existing manifest. On the DGX Spark, `bash scripts/FetchUniprotOnSpark.sh` creates `.venv`, installs only the fetch dependencies and downloads the UniProt proteome.
 
