@@ -34,6 +34,7 @@ The arch list is `12.0`, not `12.1`. Known risk: the Evo 2 README recommends tor
 | Step | Script | Output |
 |---|---|---|
 | 1 | `python -m src.FetchData` | `data/raw/` and `data/raw/manifest.json` (URL, version, sha256, date) |
+| 2 | `python -m src.PrepareGenes` | `data/processed/Genes.tsv` (CDS trimmed to 1,000 nt, GO terms), `GoTerms.tsv`, `Windows.tsv` (1 kb, step 500, both strands), `PrepareGenesSummary.json` |
 
 `--source <name>` (repeatable) downloads only the named `Config.yaml` sources and merges them into the existing manifest. On the DGX Spark, `bash scripts/FetchUniprotOnSpark.sh` creates `.venv`, installs only the fetch dependencies and downloads the UniProt proteome.
 
