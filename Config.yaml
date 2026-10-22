@@ -51,6 +51,9 @@ enrichment:
   fdr: 0.05
   fdrScope: perFeature
 
+compare:
+  candidates: 5
+
 figures:
   dpi: 300
   # Single report column (8.5 cm); the table spans the text width.
