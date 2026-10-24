@@ -18,16 +18,19 @@ The model does not run here.
 
 The Spark is arm64 with a GB10 GPU (Blackwell, sm_121, not Hopper), so only the bf16 7B checkpoints apply; the FP8 40B/20B/1B ones do not. Use the NGC image `nvcr.io/nvidia/pytorch:25.10-py3`, the first tag that supports GB10; it ships torch 2.9 + CUDA 13, so torch is not pinned in `requirements-evo2.txt`.
 
-flash-attn does not support sm_121 officially. Uninstall the copy bundled in the image first (pip treats it as satisfied and skips the build), then build it with `ninja` installed (about 75 min; hours without it):
+flash-attn does not support sm_121 officially. Uninstall the copy bundled in the image first (pip treats it as satisfied and skips the build), then build it with `ninja` installed (about 8 min with `MAX_JOBS=10`; hours without ninja):
 
 ```bash
 pip uninstall -y flash-attn
-TORCH_CUDA_ARCH_LIST="12.0" FLASH_ATTN_CUDA_ARCHS="120" pip install flash-attn==2.8.3 --no-build-isolation
+FLASH_ATTENTION_FORCE_BUILD=TRUE TORCH_CUDA_ARCH_LIST="12.0" FLASH_ATTN_CUDA_ARCHS="120" MAX_JOBS=10 \
+    pip install --no-cache-dir flash-attn==2.8.3 --no-build-isolation
 pip install -r requirements-evo2.txt
-python -m evo2.test.test_evo2_generation --model_name evo2_7b
+python -c "import flash_attn_2_cuda"
 ```
 
-The arch list is `12.0`, not `12.1`. Known risk: the Evo 2 README recommends torch 2.6 or 2.7; the image ships 2.9.
+`FLASH_ATTENTION_FORCE_BUILD=TRUE` is required: without it the flash-attn setup downloads the upstream `cu12torch2.9` aarch64 wheel, which installs cleanly and then fails on import with `libcudart.so.12: cannot open shared object file`, because the image ships CUDA 13. The arch list is `12.0`, not `12.1`. Known risk: the Evo 2 README recommends torch 2.6 or 2.7; the image ships 2.9. A flash-attn version warning from the image's Transformer Engine (`<= 2.8.1`) is expected and harmless for the 7B.
+
+`ExtractEmbeddings` downloads the checkpoint from Hugging Face unless it gets a local one: set `model.checkpointPath` in `Config.yaml` or pass `--checkpoint /path/to/evo2_7b.pt`.
 
 ## Pipeline
 

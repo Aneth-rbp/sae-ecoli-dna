@@ -53,11 +53,11 @@ def MeanPool(tokenEmbeddings, mask=None):
     return (tokens * weights[:, None]).sum(axis=0) / weights.sum()
 
 
-def LoadEvo2Embedder(modelName, layerName):
+def LoadEvo2Embedder(modelName, layerName, checkpointPath=None):
     import torch
     from evo2 import Evo2
 
-    model = Evo2(modelName)
+    model = Evo2(modelName, local_path=checkpointPath)
 
     def Embed(sequence):
         inputIds = torch.tensor(model.tokenizer.tokenize(sequence), dtype=torch.int).unsqueeze(0).to("cuda:0")
@@ -173,6 +173,7 @@ def ParseArguments(argv=None):
     parser.add_argument("--set", choices=["genes", "windows", "all"], default="all")
     parser.add_argument("--layer", default=None, help="Overrides model.layer from Config.yaml.")
     parser.add_argument("--limit", type=int, default=None, help="Embed only N pending sequences and skip assembly.")
+    parser.add_argument("--checkpoint", default=None, help="Overrides model.checkpointPath from Config.yaml.")
     return parser.parse_args(argv)
 
 
@@ -193,7 +194,8 @@ def Main(argv=None):
     embeddingsDir = Path(config["paths"].get("embeddings", DEFAULT_EMBEDDINGS_DIR))
     setNames = list(SETS) if arguments.set == "all" else [arguments.set]
     options = BuildOptions(config, layer, arguments.limit)
-    embedder = LoadEvo2Embedder(config["model"]["name"], layer)
+    checkpointPath = arguments.checkpoint or config["model"].get("checkpointPath")
+    embedder = LoadEvo2Embedder(config["model"]["name"], layer, checkpointPath)
     for setName in setNames:
         records = ReadRecords(processedDir / SETS[setName]["tsv"], ID_BUILDERS[setName])
         RunSet(setName, records, embedder, embeddingsDir, options)

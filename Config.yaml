@@ -28,6 +28,8 @@ sources:
 model:
   name: evo2_7b
   precision: bfloat16
+  # Local evo2_7b.pt; null downloads it from Hugging Face.
+  checkpointPath: null
   # Layer is fixed in #3.
   layer: null
   maxNucleotides: 1000
