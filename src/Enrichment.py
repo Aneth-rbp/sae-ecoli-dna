@@ -15,8 +15,22 @@ MATRIX_NAMES = {"sae": "Sae", "baseline": "Baseline"}
 
 
 def ReadGeneTerms(genesPath):
-    genes = pd.read_csv(genesPath, sep="\t", usecols=["locusTag", "goTerms"], dtype=str)
-    return genes["locusTag"].tolist(), [set(field.split(";")) for field in genes["goTerms"]]
+    genes = pd.read_csv(genesPath, sep="\t", usecols=["locusTag", "goTerms", "sequence"], dtype=str)
+    return genes["locusTag"].tolist(), [set(field.split(";")) for field in genes["goTerms"]], genes["sequence"].tolist()
+
+
+def CollapseIdenticalSequences(geneIds, geneTerms, sequences):
+    # One gene per identical sequence (the first in table order), with the union of the copies' GO terms.
+    firstBySequence = {}
+    keptIds, keptTerms = [], []
+    for geneId, terms, sequence in zip(geneIds, geneTerms, sequences):
+        if sequence in firstBySequence:
+            keptTerms[firstBySequence[sequence]] |= terms
+            continue
+        firstBySequence[sequence] = len(keptIds)
+        keptIds.append(geneId)
+        keptTerms.append(set(terms))
+    return keptIds, keptTerms
 
 
 def BuildMembership(geneTerms, termIds):
@@ -28,19 +42,21 @@ def BuildMembership(geneTerms, termIds):
 
 
 def LoadAnnotation(processedDir):
-    geneIds, geneTerms = ReadGeneTerms(processedDir / "Genes.tsv")
+    tableIds, tableTerms, sequences = ReadGeneTerms(processedDir / "Genes.tsv")
+    geneIds, geneTerms = CollapseIdenticalSequences(tableIds, tableTerms, sequences)
     terms = pd.read_csv(processedDir / "GoTerms.tsv", sep="\t", dtype={"goId": str, "name": str})
     termIds = terms["goId"].tolist()
-    return {"geneIds": geneIds, "termIds": termIds, "termNames": dict(zip(termIds, terms["name"])),
-            "membership": BuildMembership(geneTerms, termIds)}
+    return {"geneIds": geneIds, "tableIds": tableIds, "termIds": termIds,
+            "termNames": dict(zip(termIds, terms["name"])), "membership": BuildMembership(geneTerms, termIds)}
 
 
-def AlignRows(matrix, matrixIds, geneIds):
+def AlignRows(matrix, matrixIds, geneIds, tableIds=None):
+    tableIds = geneIds if tableIds is None else tableIds
     if len(matrixIds) != matrix.shape[0] or len(set(matrixIds)) != len(matrixIds):
         raise ValueError(f"Matrix has {matrix.shape[0]} rows but {len(matrixIds)} ids, or ids repeat")
-    if set(matrixIds) != set(geneIds):
-        missing = len(set(geneIds) - set(matrixIds))
-        extra = len(set(matrixIds) - set(geneIds))
+    if set(matrixIds) != set(tableIds):
+        missing = len(set(tableIds) - set(matrixIds))
+        extra = len(set(matrixIds) - set(tableIds))
         raise ValueError(f"Matrix ids do not match the gene table: {missing} missing, {extra} extra")
     rowIndex = {geneId: index for index, geneId in enumerate(matrixIds)}
     return matrix[[rowIndex[geneId] for geneId in geneIds]]
@@ -126,7 +142,8 @@ def BuildSignificantRows(tested, mode, annotation, fdr):
 
 
 def EnrichMatrix(matrix, matrixIds, annotation, settings):
-    aligned = AlignRows(np.asarray(matrix, dtype=np.float32), list(matrixIds), annotation["geneIds"])
+    aligned = AlignRows(np.asarray(matrix, dtype=np.float32), list(matrixIds), annotation["geneIds"],
+                        annotation.get("tableIds"))
     setsByMode = {"topN": SelectTopSets(aligned, settings["topN"]), "positive": SelectPositiveSets(aligned)}
     summaries, significants = [], []
     for mode, sets in setsByMode.items():
@@ -162,6 +179,8 @@ def Main():
     outputDir.mkdir(parents=True, exist_ok=True)
     matrixIds = idsPath.read_text(encoding="utf-8").split()
     annotation = LoadAnnotation(Path(config["paths"]["processed"]))
+    print(f"Genes: {len(annotation['tableIds'])} in the table, {len(annotation['geneIds'])} after collapsing "
+          "identical sequences")
     names = list(MATRIX_NAMES) if arguments.matrix == "all" else [arguments.matrix]
     for name in names:
         RunMatrix(name, matrixPaths[name], matrixIds, annotation, config, outputDir)

@@ -6,6 +6,7 @@ from src.Enrichment import (
     AdjustBenjaminiHochberg,
     AlignRows,
     BuildMembership,
+    CollapseIdenticalSequences,
     ComputeHypergeometric,
     EnrichMatrix,
     SelectPositiveSets,
@@ -98,6 +99,21 @@ def TestAlignRowsFailsOnMismatchedIds(matrixIds):
     matrix = np.zeros((len(matrixIds), 1))
     with pytest.raises(ValueError):
         AlignRows(matrix, matrixIds, ["b0001", "b0002"])
+
+
+def TestCollapseKeepsFirstCopyWithUnionOfTerms():
+    keptIds, keptTerms = CollapseIdenticalSequences(
+        ["b0001", "b0002", "b0003", "b0004"], [{"GO:1"}, {"GO:2"}, {"GO:3"}, {"GO:4"}], ["ACG", "TTT", "ACG", "ACG"])
+    assert keptIds == ["b0001", "b0002"]
+    assert keptTerms == [{"GO:1", "GO:3", "GO:4"}, {"GO:2"}]
+
+
+def TestAlignRowsDropsCollapsedCopiesButChecksTheWholeTable():
+    matrix = np.array([[3.0], [1.0], [2.0]])
+    aligned = AlignRows(matrix, ["b0003", "b0001", "b0002"], ["b0001", "b0003"], ["b0001", "b0002", "b0003"])
+    assert aligned[:, 0].tolist() == [1.0, 3.0]
+    with pytest.raises(ValueError):
+        AlignRows(matrix[:2], ["b0003", "b0001"], ["b0001", "b0003"], ["b0001", "b0002", "b0003"])
 
 
 def TestPValuesMatchDirectHypergeometricTail():
