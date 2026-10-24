@@ -11,9 +11,9 @@ Analysis decisions, mirrored from issue #14. Each entry states what was decided 
 - **GO terms with 5 to 500 genes, with annotations propagated to ancestors.** Very small terms give enrichments driven by one or two genes and very large ones are too generic to interpret; propagation lets a gene annotated to a specific term count toward its parents.
 - **Benjamini-Hochberg is applied per feature, over that feature's terms; global BH is a sensitivity analysis.** Per-feature correction follows Gujral et al. 2025, which keeps the comparison with the base article direct; correcting across all features and terms at once is stricter and is reported to show how much the result depends on that choice.
 - **Genomic windows are embedded on both strands.** Taking the forward strand and the reverse complement of every window matches the sense orientation of genes on either strand; it roughly doubles the window rows (about 18,000) and the embedding compute on the Spark.
+- **Embeddings come from `blocks.28.mlp.l3` of Evo 2 7B.** Block 29 of 32 is near the end without being the last one, which specializes in predicting the next nucleotide; it is also the layer of the official Evo 2 embedding example for the 7B. Extraction runs the full forward pass whatever the layer, at about 0.42 s per 1 kb sequence on the Spark (about 2.6 h for genes and windows).
 
 ## Open (see #14)
 
-- Evo 2 layer (decided in #3, which still targets Nucleotide Transformer and has to be re-scoped).
 - k for TopK (16 or 32; decided in #5 as the smaller one with explained variance >= 0.8 and fewer than 20 % dead features).
 - Third reference (decided in #11: Crook et al. (Decode-gLM) if its authors, version and DOI can be verified; otherwise Dalla-Torre et al., Nature Methods 22, 287-297, 2025).

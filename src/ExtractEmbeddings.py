@@ -2,16 +2,21 @@ import argparse
 import csv
 import json
 import os
+import subprocess
 import time
+from datetime import datetime, timezone
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
 
-from src.FetchData import LoadConfig
+from src.FetchData import LoadConfig, Sha256File
 
 DEFAULT_EMBEDDINGS_DIR = "data/embeddings"
 DEFAULT_CHECKPOINT_EVERY = 256
 CHECKPOINT_INFO_NAME = "CheckpointInfo.json"
+MANIFEST_NAME = "EmbeddingsManifest.json"
+RUNTIME_PACKAGES = ("torch", "evo2", "flash-attn")
 SHARD_PATTERN = "Shard*.npz"
 SETS = {
     "genes": {"tsv": "Genes.tsv", "prefix": "Gene"},
@@ -94,11 +99,19 @@ def ReadDoneIds(checkpointDir):
     return doneIds
 
 
-def WriteShard(checkpointDir, ids, matrix):
+def ShardSeconds(checkpointDir):
+    total = 0.0
+    for shardPath in ListShards(checkpointDir):
+        with np.load(shardPath) as shard:
+            total += float(shard["seconds"]) if "seconds" in shard.files else 0.0
+    return total
+
+
+def WriteShard(checkpointDir, ids, matrix, seconds=0.0):
     shardPath = checkpointDir / f"Shard{len(ListShards(checkpointDir)):05d}.npz"
     temporaryPath = shardPath.with_suffix(".tmp")
     with open(temporaryPath, "wb") as shardFile:
-        np.savez(shardFile, ids=np.array(ids), embeddings=matrix.astype(np.float32))
+        np.savez(shardFile, ids=np.array(ids), embeddings=matrix.astype(np.float32), seconds=np.float64(seconds))
     # Rename last so an interrupted write never leaves a half shard behind.
     os.replace(temporaryPath, shardPath)
 
@@ -113,7 +126,9 @@ def EmbedBatch(batch, embedder):
 
 def ExtractToCheckpoints(records, embedder, checkpointDir, checkpointEvery):
     for batch in SplitBatches(records, checkpointEvery):
-        WriteShard(checkpointDir, [recordId for recordId, _ in batch], EmbedBatch(batch, embedder))
+        startTime = time.perf_counter()
+        matrix = EmbedBatch(batch, embedder)
+        WriteShard(checkpointDir, [recordId for recordId, _ in batch], matrix, time.perf_counter() - startTime)
         print(f"{checkpointDir.name}: {len(ListShards(checkpointDir))} shards written", flush=True)
 
 
@@ -149,6 +164,53 @@ def SaveMatrix(embeddingsDir, prefix, ids, matrix):
     embeddingsDir.mkdir(parents=True, exist_ok=True)
     np.save(embeddingsDir / f"{prefix}Embeddings.npy", matrix.astype(np.float32))
     (embeddingsDir / f"{prefix}Ids.txt").write_text("".join(f"{recordId}\n" for recordId in ids), encoding="utf-8")
+
+
+def SetSummary(embeddingsDir, setName, shape):
+    prefix = SETS[setName]["prefix"]
+    files = [f"{prefix}Embeddings.npy", f"{prefix}Ids.txt"]
+    return {
+        "rows": shape[0],
+        "columns": shape[1],
+        "embeddingSeconds": round(ShardSeconds(embeddingsDir / "checkpoints" / setName), 1),
+        "sha256": {fileName: Sha256File(embeddingsDir / fileName) for fileName in files},
+    }
+
+
+def PackageVersion(package):
+    try:
+        return metadata.version(package)
+    except metadata.PackageNotFoundError:
+        return None
+
+
+def GitCommit():
+    # safe.directory: on the Spark the repo is mounted into a container that runs as another user.
+    try:
+        result = subprocess.run(["git", "-c", "safe.directory=*", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return result.stdout.strip()
+
+
+def WriteManifest(embeddingsDir, info, summaries, runtime):
+    manifestPath = embeddingsDir / MANIFEST_NAME
+    manifest = json.loads(manifestPath.read_text(encoding="utf-8")) if manifestPath.exists() else {"sets": {}}
+    if {key: manifest.get(key) for key in info} != info:
+        manifest = {"sets": {}}
+    manifest.update(info)
+    manifest.update(runtime)
+    manifest["sets"].update(summaries)
+    manifestPath.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest
+
+
+def RuntimeInfo():
+    return {
+        "commit": GitCommit(),
+        "versions": {package: PackageVersion(package) for package in RUNTIME_PACKAGES},
+        "createdAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
 
 
 def RunSet(setName, records, embedder, embeddingsDir, options):
@@ -196,9 +258,14 @@ def Main(argv=None):
     options = BuildOptions(config, layer, arguments.limit)
     checkpointPath = arguments.checkpoint or config["model"].get("checkpointPath")
     embedder = LoadEvo2Embedder(config["model"]["name"], layer, checkpointPath)
+    summaries = {}
     for setName in setNames:
         records = ReadRecords(processedDir / SETS[setName]["tsv"], ID_BUILDERS[setName])
-        RunSet(setName, records, embedder, embeddingsDir, options)
+        shape = RunSet(setName, records, embedder, embeddingsDir, options)
+        if shape is not None:
+            summaries[setName] = SetSummary(embeddingsDir, setName, shape)
+    if summaries:
+        WriteManifest(embeddingsDir, options["info"], summaries, RuntimeInfo())
 
 
 if __name__ == "__main__":
