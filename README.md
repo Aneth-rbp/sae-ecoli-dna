@@ -38,7 +38,7 @@ python -c "import flash_attn_2_cuda"
 |---|---|---|
 | 1 | `python -m src.FetchData` | `data/raw/` and `data/raw/manifest.json` (URL, version, sha256, date) |
 | 2 | `python -m src.PrepareGenes` | `data/processed/Genes.tsv` (CDS trimmed to 1,000 nt, GO terms), `GoTerms.tsv`, `Windows.tsv` (1 kb, step 500, both strands), `PrepareGenesSummary.json` |
-| 3 | `python -m src.ExtractEmbeddings` (DGX Spark only) | `data/embeddings/GeneEmbeddings.npy`, `GeneIds.txt`, `WindowEmbeddings.npy`, `WindowIds.txt` |
+| 3 | `python -m src.ExtractEmbeddings` (DGX Spark only) | `data/embeddings/GeneEmbeddings.npy`, `GeneIds.txt`, `WindowEmbeddings.npy`, `WindowIds.txt`, `EmbeddingsManifest.json` (layer, commit, torch/evo2/flash-attn versions, time and sha256 per set) |
 | 4 | `python -m src.TrainSae` | `results/sae/SaeParameters.npz`, `SaeMetrics.json`, `GeneActivations.npy` |
 | 5 | `python -m src.Enrichment` | `results/enrichment/SaeEnrichment.tsv`, `BaselineEnrichment.tsv`, `SaeSignificantTerms.tsv`, `BaselineSignificantTerms.tsv` |
 | 6 | `python -m src.Compare` | `results/Comparison.tsv`, `results/CandidateFeatures.tsv` |

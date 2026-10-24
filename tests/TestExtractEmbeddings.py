@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from src.FetchData import Sha256File
+
 from src.ExtractEmbeddings import (
     AssembleMatrix,
     CheckCheckpointInfo,
@@ -10,8 +12,11 @@ from src.ExtractEmbeddings import (
     ReadRecords,
     ResolveLayer,
     RunSet,
+    SetSummary,
+    ShardSeconds,
     ValidateMatrix,
     WindowId,
+    WriteManifest,
 )
 
 HIDDEN = 4
@@ -129,3 +134,28 @@ def test_layer_is_required():
         ResolveLayer({"model": {"layer": None}}, None)
     assert ResolveLayer({"model": {"layer": None}}, "blocks.28.mlp.l3") == "blocks.28.mlp.l3"
     assert ResolveLayer({"model": {"layer": "blocks.20"}}, None) == "blocks.20"
+
+
+def test_shards_record_embedding_time(tmp_path):
+    RunSet("genes", RECORDS, FakeEmbedder, tmp_path, OPTIONS)
+    assert ShardSeconds(tmp_path / "checkpoints" / "genes") >= 0.0
+    assert len(ListShards(tmp_path / "checkpoints" / "genes")) == 3
+
+
+def test_manifest_hashes_files_and_merges_sets(tmp_path):
+    runtime = {"commit": "abc", "versions": {"torch": "2.9"}, "createdAt": "2026-10-23T00:00:00+00:00"}
+    shape = RunSet("genes", RECORDS, FakeEmbedder, tmp_path, OPTIONS)
+    WriteManifest(tmp_path, OPTIONS["info"], {"genes": SetSummary(tmp_path, "genes", shape)}, runtime)
+    manifest = WriteManifest(tmp_path, OPTIONS["info"], {"windows": {"rows": 1}}, runtime)
+    genes = manifest["sets"]["genes"]
+    assert (genes["rows"], genes["columns"]) == (5, HIDDEN)
+    assert genes["sha256"]["GeneEmbeddings.npy"] == Sha256File(tmp_path / "GeneEmbeddings.npy")
+    assert set(manifest["sets"]) == {"genes", "windows"}
+    assert manifest["layer"] == "blocks.0" and manifest["commit"] == "abc"
+
+
+def test_manifest_from_another_layer_is_replaced(tmp_path):
+    runtime = {"commit": None, "versions": {}, "createdAt": "x"}
+    WriteManifest(tmp_path, {"model": "fake", "layer": "blocks.0"}, {"genes": {"rows": 1}}, runtime)
+    manifest = WriteManifest(tmp_path, {"model": "fake", "layer": "blocks.1"}, {"windows": {"rows": 1}}, runtime)
+    assert set(manifest["sets"]) == {"windows"}
