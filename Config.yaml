@@ -48,7 +48,8 @@ sae:
   epochs: 20
   batchSize: 512
   learningRate: 0.001
-  # k rule from #14: smallest candidate with explained variance >= min and dead fraction < max.
+  # Rule from #14 and #31: largest dictionary with a passing k (explained variance >= min, dead fraction < max), then its smallest k.
+  featureCandidates: [64, 128, 256]
   kCandidates: [16, 32]
   minExplainedVariance: 0.8
   maxDeadFraction: 0.2

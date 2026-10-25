@@ -23,9 +23,11 @@ SYNTHETIC_ROWS = 18564
 SYNTHETIC_DIM = 4096
 
 
-def BuildSettings(config, k):
+def BuildSettings(config, k, features=None):
     settings = {key: config["sae"][key] for key in SETTING_KEYS}
     settings["k"] = k
+    if features is not None:
+        settings["features"] = features
     settings["seed"] = config["seed"]
     return settings
 
@@ -89,27 +91,37 @@ def MeetsRule(metrics, minExplainedVariance, maxDeadFraction):
     return metrics["explainedVariance"] >= minExplainedVariance and metrics["deadFraction"] < maxDeadFraction
 
 
-def SelectK(candidates, minExplainedVariance, maxDeadFraction):
-    passing = [k for k, metrics in candidates.items() if MeetsRule(metrics, minExplainedVariance, maxDeadFraction)]
-    return min(passing) if passing else None
+def SelectCombination(candidates, minExplainedVariance, maxDeadFraction):
+    passing = [c for c in candidates if MeetsRule(c, minExplainedVariance, maxDeadFraction)]
+    if not passing:
+        return None
+    largest = max(c["features"] for c in passing)
+    return largest, min(c["k"] for c in passing if c["features"] == largest)
 
 
 def CandidateSummary(results):
-    return {str(k): {key: result["metrics"][key] for key in SUMMARY_KEYS} for k, result in results.items()}
+    return [{"features": features, "k": k, **{key: result["metrics"][key] for key in SUMMARY_KEYS}}
+            for (features, k), result in results.items()]
+
+
+def SweepCombinations(config, windows):
+    sae = config["sae"]
+    return {(features, k): RunTraining(windows, BuildSettings(config, k, features))
+            for features in sae["featureCandidates"] for k in sae["kCandidates"]}
 
 
 def TrainWithAutoK(config, windows):
     sae = config["sae"]
-    results = {k: RunTraining(windows, BuildSettings(config, k)) for k in sae["kCandidates"]}
-    chosenK = SelectK({k: result["metrics"] for k, result in results.items()},
-                      sae["minExplainedVariance"], sae["maxDeadFraction"])
-    if chosenK is None:
-        raise SystemExit("No k candidate meets the rule: " + json.dumps(CandidateSummary(results), indent=2))
-    chosen = results[chosenK]
-    chosen["metrics"].update({"kSelection": "auto", "kCandidates": CandidateSummary(results),
+    results = SweepCombinations(config, windows)
+    summary = CandidateSummary(results)
+    chosen = SelectCombination(summary, sae["minExplainedVariance"], sae["maxDeadFraction"])
+    if chosen is None:
+        raise SystemExit("No features x k combination meets the rule: " + json.dumps(summary, indent=2))
+    result = results[chosen]
+    result["metrics"].update({"kSelection": "auto", "candidates": summary,
                               "minExplainedVariance": sae["minExplainedVariance"],
                               "maxDeadFraction": sae["maxDeadFraction"]})
-    return chosen
+    return result
 
 
 def TrainForK(config, windows, kOption):
