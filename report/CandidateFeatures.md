@@ -30,4 +30,6 @@ Genome-wide reference: median CDS length 900 nt, median GC 0.524, and 44 genes o
 
 ## Left out
 
-Feature 36 (rank 3; carnitine metabolic process, 8.0e-15) is not interpreted: its most active genes (yfcE, ygjR, wcaA, kefF) are unrelated to the term, and the enrichment rests on a few genes.
+Feature 111 (rank 5; purine nucleotide binding, 1.4e-10) repeats feature 118: same terms and largely the same highly expressed genes (rpsA, rpoC, carB, rho, groL, rne).
+
+Before #36, rank 3 was feature 36 (carnitine metabolism). It was an artifact of tie-breaking: the feature is almost silent on genes, and its top-50 set was filled with zero-activation genes in genome order, which start with the *thr*, *cai* and *fix* operons.
