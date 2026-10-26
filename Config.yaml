@@ -73,5 +73,5 @@ figures:
   tableWidthInches: 6.9
   fontSize: 7
   histogramBins: 30
-  tableFeatures: 5
+  tableFeatures: 4
   showPositiveMode: false
