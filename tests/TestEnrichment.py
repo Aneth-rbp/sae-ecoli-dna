@@ -70,10 +70,26 @@ def TestBenjaminiHochbergCapsAtOne():
     assert adjusted.max() <= 1.0
 
 
-def TestTopSetsTakeExactlyNWithStableTies():
-    matrix = np.array([[1.0], [3.0], [3.0], [3.0], [0.0]])
+def TestTopSetsTakeExactlyNWithoutTiesAtTheCut():
+    matrix = np.array([[1.0], [3.0], [4.0], [2.0], [0.0]])
     sets = SelectTopSets(matrix, 2)
     assert sets[:, 0].tolist() == [False, True, True, False, False]
+
+
+def TestTopSetsDropGenesTiedAtTheCut():
+    matrix = np.array([[1.0, 0.0], [3.0, 0.0], [3.0, 2.0], [5.0, 0.0], [0.0, 0.0]])
+    sets = SelectTopSets(matrix, 2)
+    assert sets[:, 0].tolist() == [False, False, False, True, False]
+    assert sets[:, 1].tolist() == [False, False, True, False, False]
+
+
+def TestTopSetsKeepAWholeTieThatFitsInN():
+    matrix = np.array([[3.0], [3.0], [1.0]])
+    assert SelectTopSets(matrix, 2)[:, 0].tolist() == [True, True, False]
+
+
+def TestTopSetsOfASilentUnitAreEmpty():
+    assert not SelectTopSets(np.zeros((5, 1)), 2).any()
 
 
 def TestPositiveModeUsesZeroThresholdAndEmptyUnitGetsEmptyRow():

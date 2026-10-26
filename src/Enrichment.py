@@ -63,11 +63,10 @@ def AlignRows(matrix, matrixIds, geneIds, tableIds=None):
 
 
 def SelectTopSets(matrix, topN):
-    # Stable sort keeps exactly topN genes; ties at the cut go to the earlier gene in table order.
-    order = np.argsort(-matrix, axis=0, kind="stable")[:topN]
-    sets = np.zeros(matrix.shape, dtype=bool)
-    np.put_along_axis(sets, order, True, axis=0)
-    return sets
+    # A tie that crosses the cut is dropped whole, so table order never picks genes (silent SAE units tie at 0).
+    cutValue = -np.sort(-matrix, axis=0)[min(topN, matrix.shape[0]) - 1]
+    atOrAboveCut = matrix >= cutValue
+    return np.where(atOrAboveCut.sum(axis=0) <= topN, atOrAboveCut, matrix > cutValue)
 
 
 def SelectPositiveSets(matrix):
