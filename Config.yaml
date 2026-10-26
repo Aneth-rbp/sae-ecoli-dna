@@ -42,8 +42,9 @@ windows:
   strands: both
 
 sae:
-  features: 1024
-  k: null
+  # Chosen in #31 by the rule below.
+  features: 128
+  k: 32
   validationFraction: 0.2
   epochs: 20
   batchSize: 512

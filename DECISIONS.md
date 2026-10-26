@@ -5,7 +5,8 @@ Analysis decisions, mirrored from issue #14. Each entry states what was decided 
 ## Settled
 
 - **Main analysis uses the top-N genes per unit; activation > 0 is secondary.** A zero threshold on the baseline marks each dimension active in about half the genes, which makes the comparison with a sparse SAE unfair.
-- **The SAE has 1,024 features and is trained on genomic windows.** About 3,000 genes are too few rows to train a wider dictionary; 1 kb windows with a 500 nt step add roughly 9,000 rows per strand.
+- **The SAE is trained on genomic windows.** About 3,000 genes are too few rows to train a dictionary; 1 kb windows with a 500 nt step add roughly 9,000 rows per strand.
+- **The SAE has 128 features with k = 32 (#31).** Mean-pooled window embeddings are nearly low-rank: 1, 4, 12 and 30 principal components explain 50, 80, 95 and 99 % of the variance. With 1,024 features no k met the rule (k = 16: 83 % dead; k = 32: 66 %), and more epochs raised the dead fraction (88 % and 86 % at 100 epochs). The rule from #14 (explained variance >= 0.8, dead < 20 %) was applied to 64, 128 and 256 features times k = 16 and 32, taking the largest passing dictionary and then its smallest k: 128 features with k = 32 gives explained variance 0.986 and 10 % dead. 256 features failed (31 % dead at k = 32).
 - **Evo 2 7B in bf16 on the DGX Spark replaces Nucleotide Transformer v2 50M.** The Spark's GB10 GPU is not Hopper, so the FP8 checkpoints (40B, 20B, 1B) are out and the 7B runs without Transformer Engine; the Windows dev machine only downloads data and runs tests. Known risk: Evo 2 recommends torch 2.6 or 2.7, while the NGC 25.10 image that supports GB10 ships torch 2.9.
 - **N for top-N is 50.** About 1.5 % of the roughly 3,000 genes keeps each unit's gene set specific while leaving enough genes for the hypergeometric test against GO terms.
 - **GO terms with 5 to 500 genes, with annotations propagated to ancestors.** Very small terms give enrichments driven by one or two genes and very large ones are too generic to interpret; propagation lets a gene annotated to a specific term count toward its parents.
@@ -16,5 +17,4 @@ Analysis decisions, mirrored from issue #14. Each entry states what was decided 
 
 ## Open (see #14)
 
-- k for TopK (16 or 32; decided in #5 as the smaller one with explained variance >= 0.8 and fewer than 20 % dead features).
 - Third reference (decided in #11: Crook et al. (Decode-gLM) if its authors, version and DOI can be verified; otherwise Dalla-Torre et al., Nature Methods 22, 287-297, 2025).
